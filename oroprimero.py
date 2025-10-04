@@ -233,12 +233,8 @@ def prepare_dataset(prices: pd.DataFrame, sentiment: pd.Series, lags: int = 5) -
 
     if not sentiment.empty:
         sentiment_idx = pd.to_datetime(sentiment.index)
-        df = df.merge(
-            sentiment.rename("sentiment"),
-            left_index=True,
-            right_index=True,
-            how="left",
-        )
+        sentiment = pd.Series(sentiment.values, index=sentiment_idx, name="sentiment")
+        df = df.join(sentiment, how="left")
         df["sentiment"].fillna(method="ffill", inplace=True)
         df["sentiment"].fillna(0.0, inplace=True)
     else:
