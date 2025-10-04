@@ -29,21 +29,24 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 import pandas as pd
 import requests
 import statsmodels.api as sm
 
 try:  # La librería puede no estar instalada; degradamos con elegancia.
-    from nltk.sentiment import SentimentIntensityAnalyzer
+    from nltk.sentiment import SentimentIntensityAnalyzer as _SentimentIntensityAnalyzer
     from nltk import download as nltk_download
 
     _VADER_AVAILABLE = True
 except Exception:  # pragma: no cover - comportamiento defensivo.
-    SentimentIntensityAnalyzer = None  # type: ignore
+    _SentimentIntensityAnalyzer = None  # type: ignore
     nltk_download = None  # type: ignore
     _VADER_AVAILABLE = False
+
+if TYPE_CHECKING:  # pragma: no cover - solo para anotaciones estáticas.
+    from nltk.sentiment import SentimentIntensityAnalyzer
 
 try:  # ``yfinance`` facilita el acceso a precios históricos.
     import yfinance as yf
@@ -77,7 +80,7 @@ def configure_logging(verbose: bool) -> None:
     )
 
 
-def ensure_vader() -> Optional[SentimentIntensityAnalyzer]:
+def ensure_vader() -> Optional["SentimentIntensityAnalyzer"]:
     """Devuelve un analizador VADER si está disponible."""
 
     if not _VADER_AVAILABLE:
@@ -92,7 +95,7 @@ def ensure_vader() -> Optional[SentimentIntensityAnalyzer]:
         logging.warning("No fue posible descargar el léxico VADER: %s", exc)
 
     try:
-        return SentimentIntensityAnalyzer()
+        return _SentimentIntensityAnalyzer()
     except Exception as exc:  # pragma: no cover - inicialización defensiva.
         logging.warning("No se pudo inicializar VADER: %s", exc)
         return None
