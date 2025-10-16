@@ -29,21 +29,24 @@ import json
 import logging
 import os
 from dataclasses import dataclass
-from typing import Iterable, List, Optional
+from typing import Iterable, List, Optional, TYPE_CHECKING
 
 import pandas as pd
 import requests
 import statsmodels.api as sm
 
 try:  # La librería puede no estar instalada; degradamos con elegancia.
-    from nltk.sentiment import SentimentIntensityAnalyzer
+    from nltk.sentiment import SentimentIntensityAnalyzer as _SentimentIntensityAnalyzer
     from nltk import download as nltk_download
 
     _VADER_AVAILABLE = True
 except Exception:  # pragma: no cover - comportamiento defensivo.
-    SentimentIntensityAnalyzer = None  # type: ignore
+    _SentimentIntensityAnalyzer = None  # type: ignore
     nltk_download = None  # type: ignore
     _VADER_AVAILABLE = False
+
+if TYPE_CHECKING:  # pragma: no cover - solo para anotaciones estáticas.
+    from nltk.sentiment import SentimentIntensityAnalyzer
 
 try:  # ``yfinance`` facilita el acceso a precios históricos.
     import yfinance as yf
@@ -77,7 +80,7 @@ def configure_logging(verbose: bool) -> None:
     )
 
 
-def ensure_vader() -> Optional[SentimentIntensityAnalyzer]:
+def ensure_vader() -> Optional["SentimentIntensityAnalyzer"]:
     """Devuelve un analizador VADER si está disponible."""
 
     if not _VADER_AVAILABLE:
@@ -92,7 +95,7 @@ def ensure_vader() -> Optional[SentimentIntensityAnalyzer]:
         logging.warning("No fue posible descargar el léxico VADER: %s", exc)
 
     try:
-        return SentimentIntensityAnalyzer()
+        return _SentimentIntensityAnalyzer()
     except Exception as exc:  # pragma: no cover - inicialización defensiva.
         logging.warning("No se pudo inicializar VADER: %s", exc)
         return None
@@ -124,7 +127,7 @@ def fetch_gold_prices(
 
     data = data.rename(columns=str.lower)
     data = data[["close"]]
-    data.index = pd.to_datetime(data.index)
+    data.index = pd.to_datetime(data.index, utc=True).tz_convert(None)
     data.sort_index(inplace=True)
     logging.debug("Se descargaron %d observaciones de precios", len(data))
     return data
@@ -232,7 +235,7 @@ def prepare_dataset(prices: pd.DataFrame, sentiment: pd.Series, lags: int = 5) -
         df[f"lag_{lag}"] = df["return"].shift(lag)
 
     if not sentiment.empty:
-        sentiment_idx = pd.to_datetime(sentiment.index)
+        sentiment_idx = pd.to_datetime(sentiment.index, utc=True).tz_convert(None)
         sentiment = pd.Series(sentiment.values, index=sentiment_idx, name="sentiment")
         df = df.join(sentiment, how="left")
         df["sentiment"].fillna(method="ffill", inplace=True)
