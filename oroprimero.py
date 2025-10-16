@@ -127,7 +127,7 @@ def fetch_gold_prices(
 
     data = data.rename(columns=str.lower)
     data = data[["close"]]
-    data.index = pd.to_datetime(data.index)
+    data.index = pd.to_datetime(data.index, utc=True).tz_convert(None)
     data.sort_index(inplace=True)
     logging.debug("Se descargaron %d observaciones de precios", len(data))
     return data
@@ -235,7 +235,7 @@ def prepare_dataset(prices: pd.DataFrame, sentiment: pd.Series, lags: int = 5) -
         df[f"lag_{lag}"] = df["return"].shift(lag)
 
     if not sentiment.empty:
-        sentiment_idx = pd.to_datetime(sentiment.index)
+        sentiment_idx = pd.to_datetime(sentiment.index, utc=True).tz_convert(None)
         sentiment = pd.Series(sentiment.values, index=sentiment_idx, name="sentiment")
         df = df.join(sentiment, how="left")
         df["sentiment"].fillna(method="ffill", inplace=True)
